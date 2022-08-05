@@ -1,10 +1,4 @@
-# create backend script:
-vi monitoring_services.sh
-# paste the below (to be updated) #current version = v1.02; 2022.08.05 (Author: Michal Márkus)
-########################################################################################
-
-#!/bin/bash 
-# -x
+#!/bin/bash -x
 # monitoring_services.sh
 
 
@@ -41,7 +35,7 @@ services_check()
 #       service="harvest"
 
                 harvest_check="$(ssh -tt michal@itahdnasuathar.bmwgroup.net 'systemctl status harvest')"  # to be replaced with qq user!
-                if [ "$(eval echo \$${service}_check)" | sort -u | grep -v running | wc -l) -gt 0 ]; then echo "${service}" $err_msg $DATE >> ${service}_uptime.log; else echo "${service} OK";fi
+                if [ "$(eval echo \$${service}_check) | sort -u | grep -v running | wc -l)" -gt 0 ]; then echo "${service}" $err_msg $DATE >> ${service}_uptime.log; else echo "${service} OK";fi
 
         }
 
@@ -66,8 +60,8 @@ services_check()
 
         telegraf_status()
         {
-                telegraf_check="$(systemctl | grep ${service})"
-                if [ "$(eval echo \$${service}_check) | sort -u | grep -v running | wc -l)" -gt 0 ]; then echo "${service}" $err_msg$DATE >> ${service}_uptime.log; else echo "${service} OK";fi
+                telegraf_check="$(systemctl | grep telegraf | sort -u | grep -v running | wc -l)"
+                if ! [ "$(echo $telegraf_check)" == 0 ]; then echo "${service}" $err_msg$DATE >> ${service}_uptime.log; else echo "${service} OK" >> ${service}_uptime.log; fi
         }
 
 
@@ -92,12 +86,24 @@ c=0
 for((i=1;i<=5;++i))
     do
         dat=$(tac telegraf_uptime.log | sed -n "${i},1p" | cut -d@ -f2)
+
+        # with this solution when service is OK it can't have date...
+#       case $dat in
+#               ''|*[!0-9]) return 1 ;;
+#               *) echo good ;;
+#        esac
+
+        case $dat in
+         ''|*OK) return 1 ;;
+#        *) echo good ;;
+        esac
+
         epoch_dat=`date -d "${dat}" +"%s"`
-        if [ "$(echo $EPOCHNOW-$epoch_dat|bc)" -le "360"  ] # less or equal to 360 seconds AKA 6 min (5min +1min grace time due to latency)
-            then c=$((c+1))
-            if [ "$c" == "1" ]; then echo ${service}_down_since "$epoch_dat"; fi
-            #if [ "$c" == "1" ]; then echo "$epoch_dat" > ${service}_down_since ; fi
-        fi
+
+                if [ "$(echo $EPOCHNOW-$epoch_dat|bc)" -le "360"  ] # less or equal to 360 seconds AKA 6 min (5min +1min grace time due to latency)
+                    then c=$((c+1))
+                    if [ "$c" == 1 ]; then echo ${service}_down_since "$epoch_dat"; fi
+                fi
     done
 
 if [[ $c -ge 5 ]]; then echo "PLACEHOLDER for *ticket file with paramenters edited by sed will be passed to NodeRed*" | tee > monitoring_ticket_${DATE}.json; else echo OK; fi
@@ -112,38 +118,40 @@ manage_logs()
 
 # PAST INCIDENTS:
     # either use pwless ssh; or copy files to telegraf via Ansible playbook
-    
+
 #rm incidents_*.csv 2>/dev/null
 
 for T in DAYS WEEKS MONTH;
-    do declare t=${T,,}; echo $t;
+    do declare t=${T,,}; #echo $t;
         RANGE=$(date -d "$date -1 ${t}" +"%s");
 
         #cat telegraf_uptime.log | while read line;
         ls *_uptime.log | xargs cat | sort -u | while read line;
 
         do
-            x=$(echo $line |cut -d@ -f2) #  | date +"%s") #  get Date
-            y=$(date -d "$x" +"%s")  # convert it to EPOCH format
 
-            #echo $y-$RANGE|bc  # check difference
+            x=$(echo $line |grep -v OK |cut -d@ -f2)
+            # if x is number number then convert to epoch format (y):
+            if [[ $x == ?(-)+([0-9])  ]];
+                then y=$(date -d "$x" +"%s") && echo $y-$RANGE|bc  # check difference
 
-            if [ "$RANGE" -le "$y" ]; then  echo $line >> incidents_${t}.csv; fi
+                if [ "$RANGE" -le "$y" ]; then  echo $line >> incidents_${t}.csv; fi
 
+            fi
         done
 
     done
-    
-# add when it was restarted started//since when it is running, and how long it runs; was down
-# can calculate uptime from last difference 
 
-mv incidents_days.csv today.csv
-mv incidents_weeks.csv weekly.csv
-mv incidents_month.csv montly.csv
+# add when it was restarted started//since when it is running, and how long it runs; was down
+# can calculate uptime from last difference
+
+mv incidents_days.csv today.csv 2>/dev/null
+mv incidents_weeks.csv weekly.csv 2>/dev/null
+mv incidents_month.csv montly.csv 2>/dev/null
 
 }
 
 
 services_check
-#ticket
-#manage_logs
+ticket
+manage_logs
