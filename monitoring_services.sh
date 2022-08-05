@@ -1,10 +1,4 @@
-# create backend script:
-vi monitoring_services.sh
-# paste the below (to be updated) #current version = v1.05; 2022.08.05 (Author: Michal Márkus)
-########################################################################################
-
-#!/bin/bash 
-# -x
+#!/bin/bash
 # monitoring_services.sh
 
 
@@ -91,18 +85,19 @@ for((i=1;i<=5;++i))
 
         case $dat in
             ''|*OK) return 1 ;;
-            #        *) echo  ;;
+            *)
 
             epoch_dat=`date -d "${dat}" +"%s"`
 
             if [ "$(echo $EPOCHNOW-$epoch_dat|bc)" -le "360"  ] # less or equal to 360 seconds AKA 6 min (5min +1min grace time due to latency)
                 then c=$((c+1))
-                if [ "$c" == 1 ]; then echo ${service}_down_since "$epoch_dat"; fi
+#                if [ "$c" == 1 ]; then echo ${service}_down_since "$epoch_dat"; fi
             fi
+                                ;;
         esac
     done
 
-if [[ $c -ge 5 ]]; then echo "PLACEHOLDER for *ticket file with paramenters edited by sed will be passed to NodeRed*" | tee > monitoring_ticket_${DATE}.json; else echo OK; fi
+if [[ $c -ge 5 ]]; then echo "PLACEHOLDER for *ticket file with paramenters edited by sed will be passed to NodeRed*" | tee  monitoring_ticket_`date +\%Y\%m\%d\%H\%M\%S`.json; else echo OK; fi
 
 # static IDs; variables to NodeRed via json: https://atc.bmwgroup.net/confluence/download/attachments/2076532016/InterfaceContract_EventMgmt_NAS_final.pdf?version=2&modificationDate=1646741380958&api=v2
 
@@ -148,6 +143,6 @@ mv incidents_month.csv montly.csv 2>/dev/null
 }
 
 
-services_check
+#services_check
 ticket
 manage_logs
