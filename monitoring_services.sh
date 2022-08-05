@@ -1,4 +1,5 @@
-#!/bin/bash -x
+#!/bin/bash
+#-x
 # monitoring_services.sh
 
 
@@ -125,7 +126,7 @@ for T in DAYS WEEKS MONTH;
             # if x is number number then convert to epoch format (y):
             #if [[ $x == ?(-)+([0-9])  ]]; then  # x is NOT a number because "/" characters in time format!
             if ! [[ $x == ''  ]]; then
-                y=$(date -d "$x" +"%s") && echo $y-$RANGE|bc;  # check difference
+                y=$(date -d "$x" +"%s")  # && echo $y-$RANGE|bc;  # check difference
                 if [ "$RANGE" -le "$y" ]; then  echo $line >> incidents_${t}.csv; fi
             fi
         done
@@ -142,6 +143,6 @@ mv incidents_month.csv montly.csv 2>/dev/null
 }
 
 
-#services_check
-#ticket
+services_check
+ticket
 manage_logs
