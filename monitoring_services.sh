@@ -1,5 +1,4 @@
-#!/bin/bash
-#-x
+#!/bin/bash -x
 # monitoring_services.sh
 
 
@@ -78,27 +77,38 @@ ticket()
 
 # Send info to NodeRed when service is down:
 EPOCHNOW=`date -d "${DATE}" +"%s"`
-
 c=0
-for((i=1;i<=5;++i))
+
+generate_json()
+
+    for((i=1;i<=5;++i))
+        do
+            dat=$(tac ${service}_uptime.log | sed -n "${i},1p" | cut -d@ -f2)
+
+            case $dat in
+                ''|*OK) return 1 ;;
+                *)
+
+                epoch_dat=`date -d "${dat}" +"%s"`
+
+                if [ "$(echo $EPOCHNOW-$epoch_dat|bc)" -le "360"  ] # less or equal to 360 seconds AKA 6 min (5min +1min grace time due to latency)
+                    then c=$((c+1))
+    #                if [ "$c" == 1 ]; then echo ${service}_down_since "$epoch_dat"; fi
+                fi
+                                    ;;
+            esac
+        done
+
+        if [[ $c -ge 5 ]]; then echo "PLACEHOLDER for *ticket file with paramenters edited by sed will be passed to NodeRed* | EventID, Message (Date, status, Resource), severity)" | tee  ${service}_monitoring_ticket_`date +\%Y\%m\%d\%H\%M\%S`.json; else echo OK; fi
+
+    # static IDs; variables to NodeRed via json: https://atc.bmwgroup.net/confluence/download/attachments/2076532016/InterfaceContract_EventMgmt_NAS_final.pdf?version=2&modificationDate=1646741380958&api=v2
+
+
+for service in grafana influx telegraf #harvest #ansible nodered
     do
-        dat=$(tac telegraf_uptime.log | sed -n "${i},1p" | cut -d@ -f2)
-
-        case $dat in
-            ''|*OK) return 1 ;;
-            *)
-
-            epoch_dat=`date -d "${dat}" +"%s"`
-
-            if [ "$(echo $EPOCHNOW-$epoch_dat|bc)" -le "360"  ] # less or equal to 360 seconds AKA 6 min (5min +1min grace time due to latency)
-                then c=$((c+1))
-#                if [ "$c" == 1 ]; then echo ${service}_down_since "$epoch_dat"; fi
-            fi
-                                ;;
-        esac
+        generate_json
     done
 
-if [[ $c -ge 5 ]]; then echo "PLACEHOLDER for *ticket file with paramenters edited by sed will be passed to NodeRed*" | tee  monitoring_ticket_`date +\%Y\%m\%d\%H\%M\%S`.json; else echo OK; fi
 
 # static IDs; variables to NodeRed via json: https://atc.bmwgroup.net/confluence/download/attachments/2076532016/InterfaceContract_EventMgmt_NAS_final.pdf?version=2&modificationDate=1646741380958&api=v2
 
