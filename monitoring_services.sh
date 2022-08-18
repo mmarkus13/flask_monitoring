@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 # monitoring_services.sh
 
 
@@ -21,7 +21,7 @@ services_check()
 
 # ACTIVE_IQ
     # not defined yet
-    
+
 # GRAFANA:
     grafana_status()
     {
@@ -110,10 +110,10 @@ elif
     #...
 fi
 
-    
+
 #EPOCHNOW=`date -d "${DATE}" +"%s"`
     # Send info to NodeRed when service is down:
-    serviceup5min()    
+    serviceup5min()
         {
         c=0
         for((i=1;i<=5;++i))
@@ -132,8 +132,8 @@ fi
                 esac
             done
         }
- 
-    
+
+
     create_ticket()
         {
             file=${service}_monitoring_ticket_`date +\%Y\%m\%d\%H\%M`.json
@@ -143,49 +143,49 @@ fi
     for service in grafana influx telegraf #harvest #ansible nodered
         do
             serviceup5min && create_ticket
-        done 
-    }
+        done
+
 
 
     send_ticket()
         {
-        # POST json TO NODERED    
+        echo
+        # POST json TO NODERED
         }
 
     #send_ticket
 
-
+}
 
 manage_logs()
     {
         # GENERATE UPTIME LOGS FOR FLASK
-        servce_uptime()  # Grafana & Influx
+        service_uptime()  # Grafana & Influx
         {
-            # adding telegraf here (since it has more sub-precesses)
-            if $service = telegraf; then
+                if [[ "$service" = "telegraf" ]]; then
                 telegraf_sub_service_upt()
-                {
-                    stat=$(systemctl status telegraf_${sub}.service)
-                    [[ $(echo "$stat" | grep running) == running ]] && r="running" || r="down"
-                    since=(echo $stat | grep -Po ".*; \K(.*)(?= ago)" 
-                    #up_d=$(echo $stat | grep running | cut -d")" -f2)
-                    #up_d=$(echo $stat | grep -Po ".*; \K(.*)(?= ago)"
+                    {
+                    #set -x
+                    stat=`systemctl status telegraf_${sub}.service`
+                    #echo $stat
+                    [[ $(echo "$stat" | grep "running") == *running* ]] && r="Running" || r="Down"
+                    since=$(echo $stat | grep -Po ".*; \K(.*)(?= ago)")
                     epoch_since=$(date --date="$since" +"%s")
-                    ${service}_uptime=echo $(echo "$EPOCHNOW"-"$since"|bc)/60|bc  # minutes
-                    # ADD DOWNTIME CALC AS WELL!
-                    # EHHEZ SZÉT KELL SZEDNI fentebb a 'systemctl | grep telegraf' logokat az alábbi szerint:
-                        # systemctl status ITMAgents1.lz.service | grep -Po ".*; \K(.*)(?= ago)"
-                        # outputja: "6 months 14 days"
 
-                    echo -e "$r ${service}_uptime minutes" > telegraf_{sub}_uptime.log
-                }
-            
+                    uptime_seconds=`echo $epoch_since - $EPOCHNOW | bc`
+                    uptime=$(echo $uptime_seconds/60|bc)  # minutes
+
+                    echo -e "$r $uptime minutes" > telegraf_${sub}_uptime.txt
+
+                    }
+
                 for sub in broadcom cisco storage system traps
                 do
                     telegraf_sub_service_upt
                 done
-            
-            else
+
+                else
+                #set -x
                 last=$(tac ${service}_uptime.log | grep -A1 -m 1 "not")  # sample: grafana OK @08/11/2022 17:28:03
                 up=$(echo "$last" | tail -1)
                 epoch_up=`date -d "$(echo $up | cut -d@ -f2)" +"%s"`
@@ -193,90 +193,66 @@ manage_logs()
                 epoch_down=`date -d "$(echo $down | cut -d@ -f2)" +"%s"`
                 prev_down=$(tac ${service}_uptime.log | grep -m 2 "not" | tail -1)
                 epoch_prev_down=`date -d "$(echo $prev_down | cut -d@ -f2)" +"%s"`
-                ${service}_last_outage=echo $(echo "$epoch_down"-"$epoch_prev_down"|bc)/60|bc  # minutes
-                ${service}_uptime=echo $(echo "$EPOCHNOW"-"$epoch_up"|bc)/60|bc  # minutes
+                #${service}_last_outage=$(echo  $(echo "$epoch_down"-"$epoch_prev_down"|bc)/60|bc)  # minutes
 
-                #export ${service}_uptime ${service}_last_outage          
+                #minutes=$(echo "$epoch_down"-"$epoch_prev_down"|bc)#/60|bc  # minutes
+                seconds=`echo "$epoch_down"-"$epoch_prev_down"|bc`
 
-                echo -e "Down: $down\nUp:$up\nOutage Time: ${service}_last_outage minutes\nUptime: ${service}_uptime" > ${service}_up_since.txt
+                if [[ "$seconds" -eq 0 ]]
+                        then echo "UNKNOWN" > ${service}_uptime.txt
+                else
+                #echo $seconds
+                        downtime_minutes=$(echo $seconds/60|bc)
+                        service_uptime=`echo $(echo "$EPOCHNOW"-"$epoch_up"|bc)/60|bc`
+                #last_outage=$(echo "$minutes"/60|bc)
+                #service_uptime="echo $(echo $EPOCHNOW-$epoch_up|bc)/60|bc"  # minutes
 
-                for service in grafana influx #telegraf #.....
-                    do
-                        servce_uptime
-                    done
+                #export ${service}_uptime ${service}_last_outage
+
+                        echo -e "Down: $down\nUp:$up\nOutage Time: $last_outage minutes\nUptime: service_uptime" > ${service}_up_since.txt
+                fi
             fi
         }
 
-        
+
+       for service in grafana influx telegraf #.....
+        do
+          service_uptime
+        done
+
 
         past_incidents()
         {
             for T in DAYS WEEKS MONTH;
-            do declare t=${T,,}; #echo $t;
+            do declare t=${T,,};
                 RANGE=$(date -d "$date -1 ${t}" +"%s");
 
-                #cat telegraf_uptime.log | while read line;
-                ls *_uptime.log | xargs cat | grep -v OK | sort -u | while read line;
+                ls *uptime.log | xargs cat | grep -v OK | sort -u | while read line;
                 do
                     x=$(echo $line |cut -d@ -f2)
-                    # if x is number number then convert to epoch format (y):
-                    #if [[ $x == ?(-)+([0-9])  ]]; then  # x is NOT a number because "/" characters in time format!...
                     if ! [[ $x == '' ]]; then
-                        y=$(date -d "$x" +"%s")  # && echo $y-$RANGE|bc;  # check difference
+                        y=$(date -d "$x" +"%s")
                         if [ "$RANGE" -le "$y" ]; then  echo $line >> incidents_${t}.csv; fi
                     fi
                 done
             done
 
-        # add when it was restarted started//since when it is running, and how long it runs; was down
-        # can calculate uptime from last difference
 
         mv incidents_days.csv today.csv 2>/dev/null
         mv incidents_weeks.csv weekly.csv 2>/dev/null
         mv incidents_month.csv montly.csv 2>/dev/null
-    }
+        }
 
     # call past incidents subfunction
     past_incidents
 
-###########################################################################################################
-# UPTIME CALC:
-        
-#last down (N/A - UNKNOWN)
-#up since 
-#running for
-#outage duration
-"""
-telegraf_sub_service_upt()
-        {
-            systemctl status telegraf_${sub}.service | grep since | cut -d")" -f2 > telegraf_{sub}_uptime.log
-            # output sample: "since Tue 2022-06-28 14:52:39 CEST; 1 months 14 days ago"
-        }
- 
-        for sub in broadcom cisco storage system traps
-            do
-                telegraf_sub_service_upt 
-            done
-"""
-# VISUALIZE THESE LOGS ON PAST INCIDENTS TAB
+}
 
-        
-###
 # 2 szintu maintenance check:
 #        1# local offlne lekérdezés napi 1x
 #        2# kikuldés előtt  live ellenőzés
-###########################################################################################################
-}
-    
 
-###########################################################################################################
 
-#--Sandor qq user harvest status lekérdezéshez
-#--Michael Flesh maintenance  (ha nem csv akkor tud e adni accesst MSSQL)
-    
-###########################################################################################################  
-    
-    
 # Run main parts of the script:
 services_check
 ticket
