@@ -1,0 +1,16 @@
+isql -v -k "DRIVER={ODBC Driver 18 for SQL Server};SERVER=XXX,1433;UID=XXX;PWD=XXX;Authentication=SqlPassword;TrustServerCertificate=Yes"
+
+
+query < maint.sql  >/dev/null 2>&1
+
+pip install <package>  --proxy "http://qqky010:Kyndryl&BMW2022@192.109.190.88:8080"  #HTTP PROXY
+pip install <package>  --proxy "http://qqky010:Kyndryl&BMW2022@192.109.190.88:8080"  #HTTPS PROXY
+pip install <package>  --proxy ".bmwgroup.net" #NOPROXY
+
+sudo yum install unixODBC-devel
+sudo yum -y install gcc gcc-c++ kernel-devel
+sudo yum -y install python-devel libxslt-devel libffi-devel openssl-devel
+pip install Flask --proxy "http://qqky010:Kyndryl&BMW2022@192.109.190.88:8080"
+pip install python-dotenv  --proxy "http://qqky010:Kyndryl&BMW2022@192.109.190.88:8080"
+pip install pandas --proxy "http://qqky010:Kyndryl&BMW2022@192.109.190.88:8080"
+pip install pyodbc --proxy "http://qqky010:Kyndryl&BMW2022@192.109.190.88:8080"
