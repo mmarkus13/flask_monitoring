@@ -32,3 +32,14 @@ do
 done
 printf "\n"
 
+##################################
+
+i=1
+sp="/-\|"
+echo -n ' '
+#while true
+while touch mytralala; sleep .1
+do
+    printf "\b${sp:i++%${#sp}:1}"
+done
+
