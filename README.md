@@ -1,8 +1,8 @@
 # Flask monitoring infra solution (guide)
 
 Includes:
-- <b>backend scripts</b> (included within the `jupyter notebook`) to *collect and analyze status regarding monitoring services*: <mark>grafana / harvest / influx / nodered / telegraf</mark> and *send ticket to Remedy*
-- <b>UI</b> (repo included under `UI repo is inculded under /UI`)
+- <b>backend scripts</b> (code within the `jupyter notebook`) to *collect and analyze status regarding monitoring services*: <mark>grafana / harvest / influx / nodered / telegraf</mark> and *send ticket to Remedy*
+- <b>UI</b> (flask repository included under `/UI` folder)
 ![Alt text](/UI/infra.png?raw=true "Home Page")
 ![Alt text](/UI/pastincidents.png?raw=true "past incidents")
 ![Alt text](/UI/maintenance.png?raw=true "maintenance")
