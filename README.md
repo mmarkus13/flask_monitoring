@@ -1,6 +1,11 @@
+# UI
+
+![Alt text](/UI/infra.png?raw=true "Home Page")
+![Alt text](/UI/pastincidents.png?raw=true "past incidents")
+![Alt text](/UI/maintenance.png?raw=true "maintenance")
+
+
 # flask_bmw
-
-
 
 Install influx influxdb-client --proxy http://user:password@proxy.muc:8080
 
